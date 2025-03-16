@@ -19,6 +19,7 @@ profile_route = APIRouter()
 async def profile(
     pid: str, q: int, user: PdUser, engine: Annotated[Engine, Depends(get_engine)]
 ) -> PdUser:
+    assert engine.url == pid and engine.nums == q
     return PdUser(id=user.id, name=user.name, email=user.email)
 
 

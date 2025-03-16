@@ -7,8 +7,11 @@ class User(Struct):
     email: str
 
 
-class Engine: ...
+class Engine:
+    def __init__(self, url: str, nums: int):
+        self.url = url
+        self.nums = nums
 
 
-def get_engine() -> Engine:
-    return Engine()
+def get_engine(pid: str, q: int) -> Engine:
+    return Engine(url=pid, nums=q)

@@ -46,6 +46,28 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
    6 ~ │ wrk.headers["Content-Type"] = "application/json"
 ```
 
+### data.py
+
+```python
+from msgspec import Struct
+
+
+class User(Struct):
+    id: int
+    name: str
+    email: str
+
+
+class Engine:
+    def __init__(self, url: str, nums: int):
+        self.url = url
+        self.nums = nums
+
+
+def get_engine(pid: str, q: int) -> Engine:
+    return Engine(url=pid, nums=q)
+```
+
 
 ## Lihil
 
@@ -63,6 +85,7 @@ profile_route.factory(get_engine)
 
 @profile_route.post
 async def profile(pid: str, q: int, user: Body[User], engine: Engine) -> User:
+    assert engine.url == pid and engine.nums == q
     return User(id=user.id, name=user.name, email=user.email)
 
 
@@ -77,18 +100,18 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 Running 10s test @ http://localhost:8000/profile/p?q=5
   4 threads and 64 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     2.28ms    6.91ms 165.67ms   99.10%
-    Req/Sec     9.18k   818.49    10.06k    95.47%
-  362755 requests in 10.01s, 48.43MB read
-Requests/sec:  36239.05
-Transfer/sec:      4.84MB
+    Latency     2.53ms    9.23ms 174.74ms   99.17%
+    Req/Sec     8.92k     0.89k    9.60k    94.70%
+  351456 requests in 10.00s, 46.92MB read
+Requests/sec:  35135.64
+Transfer/sec:      4.69MB
 ```
-
 
 
 ## Litestar
 
 ### source code
+
 ```python
 from litestar import Litestar, Router, post
 from litestar.di import Provide
@@ -110,6 +133,7 @@ async def profile_handler(
     data: User = Body(),  # Changed from 'user' to 'data'
     engine: Engine = Provide(provide_engine),  # Injected dependency
 ) -> User:
+    assert engine.url == pid and engine.nums == q
     return User(id=data.id, name=data.name, email=data.email)
 
 
@@ -133,11 +157,11 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 Running 10s test @ http://localhost:8000/profile/p?q=5
   4 threads and 64 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     3.04ms    4.21ms 101.24ms   99.33%
-    Req/Sec     5.81k   346.53     6.40k    92.71%
-  230278 requests in 10.01s, 38.87MB read
-Requests/sec:  23013.11
-Transfer/sec:      3.88MB
+    Latency     4.44ms   13.80ms 229.39ms   98.37%
+    Req/Sec     5.59k   755.03    16.83k    97.98%
+  220904 requests in 10.08s, 37.29MB read
+Requests/sec:  21905.83
+Transfer/sec:      3.70MB
 ```
 
 
@@ -183,9 +207,55 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 Running 10s test @ http://localhost:8000/profile/p?q=5
   4 threads and 64 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency    11.06ms   10.18ms 210.40ms   98.60%
-    Req/Sec     1.58k   134.55     1.72k    94.16%
-  62477 requests in 10.01s, 10.25MB read
-Requests/sec:   6242.67
-Transfer/sec:      1.02MB
+    Latency    11.42ms    4.19ms 132.01ms   95.22%
+    Req/Sec     1.43k   111.81     1.58k    87.47%
+  56778 requests in 10.01s, 9.31MB read
+Requests/sec:   5672.98
+Transfer/sec:      0.93MB
+```
+
+
+## Starlette
+
+### source code
+
+```python
+from msgspec.json import decode, encode
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette.routing import Route
+
+from .data import Engine, User, get_engine
+
+
+async def profile_handler(request: Request):
+    pid = request.path_params["pid"]
+    q = int(request.query_params.get("q", "0"))
+    engine: Engine = get_engine(pid=pid, q=q)
+    assert engine.url == pid and engine.nums == q
+    body_bytes = await request.body()
+    user = User(**decode(body_bytes))
+    return Response(encode(User(id=user.id, name=user.name, email=user.email)))
+
+
+routes = [
+    Route("/profile/{pid}", profile_handler, methods=["POST"]),
+]
+
+app = Starlette(routes=routes)
+```
+
+### Result
+
+```bash
+wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
+Running 10s test @ http://localhost:8000/profile/p?q=5
+  4 threads and 64 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     2.60ms    9.31ms 172.91ms   98.92%
+    Req/Sec     9.00k     0.97k   11.92k    96.48%
+  356674 requests in 10.03s, 47.62MB read
+Requests/sec:  35560.72
+Transfer/sec:      4.75MB
 ```

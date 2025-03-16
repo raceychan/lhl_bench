@@ -12,6 +12,7 @@ async def profile_handler(
     data: User = Body(),
     engine: Engine = Provide(get_engine),
 ) -> User:
+    assert engine.url == pid and engine.nums == q
     return User(id=data.id, name=data.name, email=data.email)
 
 
