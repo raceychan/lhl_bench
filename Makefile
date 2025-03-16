@@ -6,3 +6,6 @@ ls:
 
 fa:
 	uv run uvicorn bench.fa:app --interface asgi3 --http httptools --no-access-log --log-level "warning"
+
+slt:
+	uv run uvicorn bench.slt:app --interface asgi3 --http httptools --no-access-log --log-level "warning"
