@@ -1,3 +1,6 @@
+## TLDR
+
+![res](/assets/benchmark.png)
 
 ## Context
 
