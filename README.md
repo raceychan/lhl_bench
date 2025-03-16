@@ -14,11 +14,16 @@
 ### OS
 Ubuntu 20.04.6 LTS
 packages
-python == 3.12
-uvloop==0.21.0
-uvicorn==0.34.0
-lihil==0.1.3
-fastapi==0.115.8
+
+- python == 3.12
+- uvloop==0.21.0
+- httptools==0.6.4
+- uvicorn==0.34.0
+
+
+- lihil==0.1.3
+- fastapi==0.115.8
+- litestar>=2.15.1
 
 ### Test command
 
@@ -133,4 +138,54 @@ Running 10s test @ http://localhost:8000/profile/p?q=5
   230278 requests in 10.01s, 38.87MB read
 Requests/sec:  23013.11
 Transfer/sec:      3.88MB
+```
+
+
+## FastAPI
+
+
+### source code
+
+```python
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, FastAPI
+from pydantic import BaseModel
+
+from .data import Engine, get_engine
+
+
+class PdUser(BaseModel):
+    id: int
+    name: str
+    email: str
+
+
+profile_route = APIRouter()
+
+
+@profile_route.post("/profile/{pid}")
+async def profile(
+    pid: str, q: int, user: PdUser, engine: Annotated[Engine, Depends(get_engine)]
+) -> PdUser:
+    return PdUser(id=user.id, name=user.name, email=user.email)
+
+
+app = FastAPI()
+app.include_router(profile_route)
+```
+
+
+### Result
+
+```bash
+wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
+Running 10s test @ http://localhost:8000/profile/p?q=5
+  4 threads and 64 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    11.06ms   10.18ms 210.40ms   98.60%
+    Req/Sec     1.58k   134.55     1.72k    94.16%
+  62477 requests in 10.01s, 10.25MB read
+Requests/sec:   6242.67
+Transfer/sec:      1.02MB
 ```
