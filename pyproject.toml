@@ -1,5 +1,6 @@
 [project]
 dependencies = [
+  "blacksheep>=2.0.8",
   "fastapi>=0.115.11",
   "httptools>=0.6.4",
   "lihil>=0.1.3",

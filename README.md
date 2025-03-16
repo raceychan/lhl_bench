@@ -259,3 +259,48 @@ Running 10s test @ http://localhost:8000/profile/p?q=5
 Requests/sec:  35560.72
 Transfer/sec:      4.75MB
 ```
+
+
+## Blacksheep
+
+### source code
+
+```python
+from blacksheep import Application, FromJSON, FromQuery, JSONContent, Response
+from blacksheep.server.routing import Router
+from msgspec.structs import asdict
+
+from .data import Engine, User, get_engine
+
+app = Application()
+
+
+@app.router.post("/profile/{pid}")
+async def profile_handler(
+    pid: str,
+    data: FromJSON[User],
+    q: FromQuery[int] = FromQuery(""),
+) -> Response:
+    # Get engine
+    engine: Engine = get_engine(pid=pid, q=q)
+    assert engine.url == pid and engine.nums == q
+
+    user = data.value
+
+    result = User(id=user.id, name=user.name, email=user.email)
+    return Response(status=200, content=JSONContent(asdict(result)))
+```
+
+### Result
+
+```bash
+wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
+Running 10s test @ http://localhost:8000/profile/p?q=5
+  4 threads and 64 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     2.30ms    3.02ms  83.39ms   99.55%
+    Req/Sec     7.51k   458.55     8.03k    85.93%
+  297405 requests in 10.00s, 48.78MB read
+Requests/sec:  29732.23
+Transfer/sec:      4.88M
+```
