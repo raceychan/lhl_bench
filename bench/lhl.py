@@ -14,7 +14,3 @@ async def profile(pid: str, q: int, user: Body[User], engine: Engine) -> User:
 
 app = Lihil()
 app.include_routes(profile_route)
-
-#if __name__ == "__main__":
-#    uvicorn.run(app, access_log=None, log_level="warning")
-#
