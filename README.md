@@ -217,6 +217,20 @@ Requests/sec:   5672.98
 Transfer/sec:      0.93MB
 ```
 
+fastapi will be faster if we wrap get_engine inside an async function, resulting
+
+```bash
+wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
+Running 10s test @ http://localhost:8000/profile/p?q=5
+  4 threads and 64 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     5.66ms    2.55ms  90.26ms   97.70%
+    Req/Sec     2.89k   100.78     3.32k    69.77%
+  114082 requests in 10.03s, 18.71MB read
+Requests/sec:  11374.63
+Transfer/sec:      1.87MB
+```
+
 
 ## Starlette
 
