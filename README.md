@@ -2,6 +2,10 @@
 
 ![res](/assets/benchmark.png)
 
+## PR are welcome !
+
+it is natural that people would think this benchmark is biased given it is created by the author of lihil, which makes makes PR even more valuable and appreciated, if you would like to see your test results shown here or if you have better test idea please feel free to submit a PR.
+
 ## Context
 
 ### Hardware
