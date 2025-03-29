@@ -1,4 +1,5 @@
 import json
+
 from robyn import Request, Robyn, jsonify
 
 from .data import Engine, User, get_engine
@@ -14,6 +15,11 @@ async def profile_handler(request: Request):
     assert engine.url == pid and engine.nums == q
     user = User(**json.loads(request.body))
     return jsonify(user.asdict())
+
+
+@app.get("/ping")
+async def ping():
+    return "pong"
 
 
 app.start(port=8000)

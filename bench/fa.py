@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from .data import Engine, get_engine
@@ -17,6 +18,7 @@ class PdUser(BaseModel):
 
 
 profile_route = APIRouter()
+ping_route = APIRouter()
 
 
 @profile_route.post("/profile/{pid}")
@@ -27,5 +29,11 @@ async def profile(
     return PdUser(id=user.id, name=user.name, email=user.email)
 
 
+@ping_route.get("/ping")
+async def ping():
+    return PlainTextResponse("pong")
+
+
 app = FastAPI()
 app.include_router(profile_route)
+app.include_router(ping_route)

@@ -2,7 +2,7 @@ import json
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 
 from .data import Engine, User, get_engine
@@ -19,7 +19,12 @@ async def profile_handler(request: Request):
     return JSONResponse(new_user)
 
 
+async def ping(r: Request):
+    return PlainTextResponse("pong")
+
+
 routes = [
+    Route("/ping", ping, methods=["GET"]),
     Route("/profile/{pid}", profile_handler, methods=["POST"]),
 ]
 

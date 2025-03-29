@@ -1,6 +1,12 @@
-from blacksheep import Application, FromJSON, FromQuery, JSONContent, Response
-from blacksheep.server.routing import Router
-from msgspec.structs import asdict
+from blacksheep import (
+    Application,
+    FromJSON,
+    FromQuery,
+    JSONContent,
+    Response,
+    TextContent,
+    get,
+)
 
 from .data import Engine, User, get_engine
 
@@ -19,3 +25,8 @@ async def profile_handler(
     user = data.value
     user = User(id=user.id, name=user.name, email=user.email)
     return Response(status=200, content=JSONContent(user.asdict()))
+
+
+@get("/ping")
+async def pong():
+    return Response(status=200, content=TextContent("pong"))

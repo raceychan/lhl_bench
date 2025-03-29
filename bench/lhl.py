@@ -13,5 +13,7 @@ async def profile(pid: str, q: int, user: Body[User], engine: Engine) -> User:
     return User(id=user.id, name=user.name, email=user.email)
 
 
-app = Lihil()
-app.include_routes(profile_route)
+app = Lihil(routes=[profile_route])
+
+
+app.static("/ping", "pong")
