@@ -16,8 +16,6 @@ async def profile_handler(
     # Get engine
     engine: Engine = get_engine(pid=pid, q=q)
     assert engine.url == pid and engine.nums == q
-
     user = data.value
-
-    result = User(id=user.id, name=user.name, email=user.email)
-    return Response(status=200, content=JSONContent(asdict(result)))
+    user = User(id=user.id, name=user.name, email=user.email)
+    return Response(status=200, content=JSONContent(user.asdict()))

@@ -34,12 +34,31 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 
 4 threas, 64 connections
 
+#### wrk install guide
+
+```bash
+sudo apt-get install build-essential libssl-dev git -y
+git clone https://github.com/wg/wrk.git wrk
+cd wrk
+make
+# move the executable to somewhere in your PATH, ex:
+sudo cp wrk /usr/local/bin
+```
+
+reference: https://nitikagarw.medium.com/getting-started-with-wrk-and-wrk2-benchmarking-6e3cdc76555f
+
 ### Test Method
+
+#### Procedures
 
 1. send a post request with path param, query param, request body to server.
 2. server receives these data, parse it as `User` object
 3. server make a new `User` object out of the receiving user
 4. serialize and return `User` in json.
+
+#### Json Seria/deserialization
+
+we prefer the builtin json serialization api of the tested framework, if there isn't one, we will use python `json` package.
 
 ### Test script
 
@@ -128,7 +147,7 @@ import json
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from .data import Engine, User, get_engine
@@ -141,9 +160,8 @@ async def profile_handler(request: Request):
     assert engine.url == pid and engine.nums == q
     body_bytes = await request.body()
     user = User(**json.loads(body_bytes))
-    return Response(
-        json.dumps(User(id=user.id, name=user.name, email=user.email).asdict())
-    )
+    new_user = User(id=user.id, name=user.name, email=user.email).asdict()
+    return JSONResponse(new_user)
 
 
 routes = [
@@ -160,11 +178,11 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 Running 10s test @ http://localhost:8000/profile/p?q=5
   4 threads and 64 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     2.03ms    2.35ms  82.87ms   99.51%
-    Req/Sec     8.43k   775.29    15.72k    84.75%
-  335468 requests in 10.07s, 46.39MB read
-Requests/sec:  33326.02
-Transfer/sec:      4.61MB
+    Latency     2.13ms    1.54ms  58.23ms   98.14%
+    Req/Sec     7.81k   544.11    12.21k    82.25%
+  311048 requests in 10.05s, 51.02MB read
+Requests/sec:  30950.06
+Transfer/sec:      5.08MB
 ```
 
 ## Blacksheep
@@ -174,7 +192,6 @@ Transfer/sec:      4.61MB
 ```python
 from blacksheep import Application, FromJSON, FromQuery, JSONContent, Response
 from blacksheep.server.routing import Router
-from msgspec.structs import asdict
 
 from .data import Engine, User, get_engine
 
@@ -190,11 +207,9 @@ async def profile_handler(
     # Get engine
     engine: Engine = get_engine(pid=pid, q=q)
     assert engine.url == pid and engine.nums == q
-
     user = data.value
-
-    result = User(id=user.id, name=user.name, email=user.email)
-    return Response(status=200, content=JSONContent(asdict(result)))
+    user = User(id=user.id, name=user.name, email=user.email)
+    return Response(status=200, content=JSONContent(user.asdict()))
 ```
 
 ### Result

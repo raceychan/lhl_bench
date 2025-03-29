@@ -2,7 +2,7 @@ import json
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from .data import Engine, User, get_engine
@@ -15,9 +15,8 @@ async def profile_handler(request: Request):
     assert engine.url == pid and engine.nums == q
     body_bytes = await request.body()
     user = User(**json.loads(body_bytes))
-    return Response(
-        json.dumps(User(id=user.id, name=user.name, email=user.email).asdict())
-    )
+    new_user = User(id=user.id, name=user.name, email=user.email).asdict()
+    return JSONResponse(new_user)
 
 
 routes = [
