@@ -1,6 +1,16 @@
 ## TLDR
 
-![res](/assets/benchmark_complex.png)
+### Test a post request with path, query, body param, and a dependency
+
+![res](/assets/bench_complex.png)
+
+[check details here](/bench_results/test_complex.md)
+
+### Test a get request with only static path param and return a static text response
+
+![res](/assets/bench_ping.png)
+
+[check details here](/bench_results/test_ping.md)
 
 ## Context
 
