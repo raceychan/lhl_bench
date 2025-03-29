@@ -3,8 +3,9 @@ dependencies = [
   "blacksheep>=2.0.8",
   "fastapi>=0.115.11",
   "httptools>=0.6.4",
-  "lihil>=0.1.3",
+  "lihil>=0.1.12",
   "litestar>=2.15.1",
+  "robyn>=0.37.0",
   "uvicorn>=0.34.0",
   "uvloop>=0.21.0",
 ]

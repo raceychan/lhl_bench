@@ -1,4 +1,5 @@
-from msgspec.json import decode, encode
+import json
+
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import Response
@@ -13,8 +14,10 @@ async def profile_handler(request: Request):
     engine: Engine = get_engine(pid=pid, q=q)
     assert engine.url == pid and engine.nums == q
     body_bytes = await request.body()
-    user = User(**decode(body_bytes))
-    return Response(encode(User(id=user.id, name=user.name, email=user.email)))
+    user = User(**json.loads(body_bytes))
+    return Response(
+        json.dumps(User(id=user.id, name=user.name, email=user.email).asdict())
+    )
 
 
 routes = [

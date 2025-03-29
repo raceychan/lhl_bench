@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 
 # Define frameworks and their corresponding RPS values
-frameworks = ["Lihil", "Litestar", "FastAPI", "Starlette", "Blacksheep"]
-rps = [35135.64, 21905.83, 5672.98, 35560.72, 29732.23]
+frameworks = ["Lihil", "Litestar", "FastAPI", "Starlette", "Blacksheep", "Robyn"]
+rps = [35135.64, 21905.83, 5672.98, 33326.02, 29732.23, 16012.57]
 
 # Sort frameworks by RPS descending
 sorted_data = sorted(zip(frameworks, rps), key=lambda x: x[1], reverse=True)
@@ -11,7 +11,9 @@ sorted_frameworks, sorted_rps = zip(*sorted_data)
 # Create the bar chart
 plt.figure(figsize=(10, 6))
 bars = plt.bar(
-    sorted_frameworks, sorted_rps, color=["purple", "blue", "orange", "green", "red"]
+    sorted_frameworks,
+    sorted_rps,
+    color=["purple", "blue", "orange", "green", "red", "yellow"],
 )
 
 # Add labels and title

@@ -1,10 +1,14 @@
 from msgspec import Struct
+from msgspec.structs import asdict
 
 
 class User(Struct):
     id: int
     name: str
     email: str
+
+    def asdict(self):
+        return asdict(self)
 
 
 class Engine:

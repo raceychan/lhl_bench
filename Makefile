@@ -12,3 +12,9 @@ slt:
 
 bs:
 	uv run uvicorn bench.bs:app --interface asgi3 --http httptools --no-access-log --log-level "warning"
+
+rb:
+	uv run python -m bench.rb.py
+
+graph:
+	uv run python make_graph.py

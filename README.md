@@ -34,6 +34,13 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 
 4 threas, 64 connections
 
+### Test Method
+
+1. send a post request with path param, query param, request body to server.
+2. server receives these data, parse it as `User` object
+3. server make a new `User` object out of the receiving user
+4. serialize and return `User` in json.
+
 ### Test script
 
 ```bash
@@ -74,6 +81,8 @@ def get_engine(pid: str, q: int) -> Engine:
 
 ## Lihil
 
+v0.1.12
+
 ### source code
 
 ```python
@@ -103,11 +112,103 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 Running 10s test @ http://localhost:8000/profile/p?q=5
   4 threads and 64 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     2.53ms    9.23ms 174.74ms   99.17%
-    Req/Sec     8.92k     0.89k    9.60k    94.70%
-  351456 requests in 10.00s, 46.92MB read
-Requests/sec:  35135.64
-Transfer/sec:      4.69MB
+    Latency     1.78ms  393.38us  27.78ms   95.12%
+    Req/Sec     9.01k     1.09k   28.05k    96.00%
+  358958 requests in 10.08s, 47.93MB read
+Requests/sec:  35596.90
+Transfer/sec:      4.75MB
+```
+
+## Starlette
+
+### source code
+
+```python
+import json
+
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette.routing import Route
+
+from .data import Engine, User, get_engine
+
+
+async def profile_handler(request: Request):
+    pid = request.path_params["pid"]
+    q = int(request.query_params.get("q", "0"))
+    engine: Engine = get_engine(pid=pid, q=q)
+    assert engine.url == pid and engine.nums == q
+    body_bytes = await request.body()
+    user = User(**json.loads(body_bytes))
+    return Response(
+        json.dumps(User(id=user.id, name=user.name, email=user.email).asdict())
+    )
+
+
+routes = [
+    Route("/profile/{pid}", profile_handler, methods=["POST"]),
+]
+
+app = Starlette(routes=routes)
+```
+
+### Result
+
+```bash
+wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
+Running 10s test @ http://localhost:8000/profile/p?q=5
+  4 threads and 64 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     2.03ms    2.35ms  82.87ms   99.51%
+    Req/Sec     8.43k   775.29    15.72k    84.75%
+  335468 requests in 10.07s, 46.39MB read
+Requests/sec:  33326.02
+Transfer/sec:      4.61MB
+```
+
+## Blacksheep
+
+### source code
+
+```python
+from blacksheep import Application, FromJSON, FromQuery, JSONContent, Response
+from blacksheep.server.routing import Router
+from msgspec.structs import asdict
+
+from .data import Engine, User, get_engine
+
+app = Application()
+
+
+@app.router.post("/profile/{pid}")
+async def profile_handler(
+    pid: str,
+    data: FromJSON[User],
+    q: FromQuery[int] = FromQuery(""),
+) -> Response:
+    # Get engine
+    engine: Engine = get_engine(pid=pid, q=q)
+    assert engine.url == pid and engine.nums == q
+
+    user = data.value
+
+    result = User(id=user.id, name=user.name, email=user.email)
+    return Response(status=200, content=JSONContent(asdict(result)))
+```
+
+### Result
+
+```bash
+wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
+Running 10s test @ http://localhost:8000/profile/p?q=5
+  4 threads and 64 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     2.18ms    1.76ms  70.41ms   98.72%
+    Req/Sec     7.67k   429.31    10.47k    86.75%
+  305344 requests in 10.03s, 50.09MB read
+Requests/sec:  30429.13
+Transfer/sec:      4.99MB
 ```
 
 
@@ -160,13 +261,12 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 Running 10s test @ http://localhost:8000/profile/p?q=5
   4 threads and 64 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     4.44ms   13.80ms 229.39ms   98.37%
-    Req/Sec     5.59k   755.03    16.83k    97.98%
-  220904 requests in 10.08s, 37.29MB read
-Requests/sec:  21905.83
-Transfer/sec:      3.70MB
+    Latency     3.31ms    4.59ms 127.83ms   99.15%
+    Req/Sec     5.39k   448.61     8.70k    98.00%
+  214628 requests in 10.06s, 36.23MB read
+Requests/sec:  21329.76
+Transfer/sec:      3.60MB
 ```
-
 
 ## FastAPI
 
@@ -231,37 +331,31 @@ Requests/sec:  11374.63
 Transfer/sec:      1.87MB
 ```
 
+## Robyn
 
-## Starlette
+robyn is not an ASGI-compatible web framework.
 
 ### source code
 
 ```python
-from msgspec.json import decode, encode
-from starlette.applications import Starlette
-from starlette.requests import Request
-from starlette.responses import Response
-from starlette.routing import Route
+import json
+from robyn import Request, Robyn, jsonify
 
 from .data import Engine, User, get_engine
 
+app = Robyn(__file__)
 
+
+@app.post("/profile/:pid")
 async def profile_handler(request: Request):
     pid = request.path_params["pid"]
-    q = int(request.query_params.get("q", "0"))
+    q = int(request.queries.get("q", "0"))
     engine: Engine = get_engine(pid=pid, q=q)
     assert engine.url == pid and engine.nums == q
-    body_bytes = await request.body()
-    user = User(**decode(body_bytes))
-    return Response(encode(User(id=user.id, name=user.name, email=user.email)))
-
-
-routes = [
-    Route("/profile/{pid}", profile_handler, methods=["POST"]),
-]
-
-app = Starlette(routes=routes)
+    user = User(**json.loads(request.body))
+    return jsonify(user.asdict())
 ```
+
 
 ### Result
 
@@ -270,54 +364,9 @@ wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
 Running 10s test @ http://localhost:8000/profile/p?q=5
   4 threads and 64 connections
   Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     2.60ms    9.31ms 172.91ms   98.92%
-    Req/Sec     9.00k     0.97k   11.92k    96.48%
-  356674 requests in 10.03s, 47.62MB read
-Requests/sec:  35560.72
-Transfer/sec:      4.75MB
-```
-
-
-## Blacksheep
-
-### source code
-
-```python
-from blacksheep import Application, FromJSON, FromQuery, JSONContent, Response
-from blacksheep.server.routing import Router
-from msgspec.structs import asdict
-
-from .data import Engine, User, get_engine
-
-app = Application()
-
-
-@app.router.post("/profile/{pid}")
-async def profile_handler(
-    pid: str,
-    data: FromJSON[User],
-    q: FromQuery[int] = FromQuery(""),
-) -> Response:
-    # Get engine
-    engine: Engine = get_engine(pid=pid, q=q)
-    assert engine.url == pid and engine.nums == q
-
-    user = data.value
-
-    result = User(id=user.id, name=user.name, email=user.email)
-    return Response(status=200, content=JSONContent(asdict(result)))
-```
-
-### Result
-
-```bash
-wrk -t4 -c64 'http://localhost:8000/profile/p?q=5' -s scripts/post.lua
-Running 10s test @ http://localhost:8000/profile/p?q=5
-  4 threads and 64 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     2.30ms    3.02ms  83.39ms   99.55%
-    Req/Sec     7.51k   458.55     8.03k    85.93%
-  297405 requests in 10.00s, 48.78MB read
-Requests/sec:  29732.23
-Transfer/sec:      4.88M
+    Latency     4.35ms    1.16ms  66.49ms   91.64%
+    Req/Sec     3.71k   432.29    10.25k    87.00%
+  147681 requests in 10.06s, 20.99MB read
+Requests/sec:  14683.41
+Transfer/sec:      2.09MB
 ```
