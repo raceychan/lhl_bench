@@ -12,9 +12,11 @@
 
 [check details here](/bench_results/test_ping.md)
 
-## PR are welcome !
+## PRs are welcome !
 
-it is natural that people would think this benchmark is biased given it is created by the author of lihil, which makes makes PR even more valuable and appreciated, if you would like to see your test results shown here or if you have better test idea please feel free to submit a PR.
+It is natural that people would think this benchmark is biased given it is created by the author of lihil, which makes makes PR even more valuable and appreciated.
+
+If you would like to see your test results shown here or if you have better idea for testing/benchmarking, please feel free to submit a PR.
 
 ## Context
 
@@ -30,13 +32,13 @@ it is natural that people would think this benchmark is biased given it is creat
 
 ### OS
 Ubuntu 20.04.6 LTS
-packages
+
+### packages
 
 - python == 3.12
 - uvloop==0.21.0
 - httptools==0.6.4
 - uvicorn==0.34.0
-
 
 - lihil==0.1.12
 - fastapi==0.115.8
