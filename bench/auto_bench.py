@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Automated benchmarking script for Python ASGI web frameworks.
 
@@ -20,6 +21,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from msgspec import Struct
+from msgspec.json import decode, encode
 from msgspec.structs import asdict
 
 # Configure logging
@@ -29,14 +31,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# build_asgi_command function removed - now handled by FrameWorkConfig.command property
-
-
 # ASGI compatible frameworks
 ASGI_FRAMEWORKS = ["Lihil", "Starlette", "FastAPI", "Litestar", "Blacksheep", "Sanic"]
 
 # Non-ASGI frameworks with custom commands
-NON_ASGI_FRAMEWORKS = {"Robyn": ["uv", "run", "python", "-m", "bench.robyn"]}
+NON_ASGI_FRAMEWORKS = {"Robyn": ["uv", "run", "python", "-m", "src.robyn"]}
 
 
 class Base(Struct):
@@ -54,7 +53,7 @@ class FrameWorkConfig(Base):
             "uv",
             "run",
             "uvicorn",
-            f"bench.{self.name.lower()}:app",
+            f"src.{self.name.lower()}:app",
             "--interface",
             "asgi3",
             "--http",
@@ -74,11 +73,51 @@ class NonASGIConfig(Base):
 
 
 class BenchmarkConfig(Base):
+    bench_name: str
+    method: str
     url: str
-    script: str
-    threads: int
-    connections: int
-    duration: str
+    data: dict[str, Any] | None = None
+    threads: int = 4
+    connections: int = 64
+    duration: str = "10s"
+
+    @property
+    def script_name(self) -> str:
+        """Generate script filename based on test name and method."""
+        return f"{self.bench_name}_{self.method.lower()}.lua"
+
+    def generate_lua_script(self, tests_dir: Path) -> Path:
+        """Generate wrk Lua script content based on config."""
+        script_lines = []
+
+        # Set HTTP method
+        script_lines.append(f'wrk.method = "{self.method}"')
+
+        # Set body data if provided
+        if self.data:
+            body_json = encode(self.data).decode()
+            script_lines.append(f"wrk.body = '{body_json}'")
+            script_lines.append('wrk.headers["Content-Type"] = "application/json"')
+
+        content = "\n".join(script_lines)
+
+        script_path = tests_dir / self.script_name
+
+        # Generate and write script
+        with open(script_path, "w") as f:
+            f.write(content)
+        return script_path
+
+    @classmethod
+    def from_file(cls, config_file: Path) -> list["BenchmarkConfig"]:
+        # Benchmark configurations
+        """Load test configurations from test.json file."""
+
+        with open(config_file, "r") as f:
+            test_data = f.read()
+
+        configs = decode(test_data, type=list[BenchmarkConfig], strict=False)
+        return configs
 
 
 class FrameworkResult(Base):
@@ -95,10 +134,6 @@ class BenchmarkResults(Base):
         return {result.framework: result.rps for result in self.results}
 
 
-class AllBenchmarkResults(Base):
-    benchmarks: dict[str, BenchmarkResults]
-
-
 # Framework configurations using structured data
 FRAMEWORKS: dict[str, FrameWorkConfig | NonASGIConfig] = {
     **{
@@ -111,16 +146,27 @@ FRAMEWORKS: dict[str, FrameWorkConfig | NonASGIConfig] = {
     },
 }
 
-# Benchmark configurations
-BENCHMARKS = {
-    "complex": BenchmarkConfig(
-        url="http://localhost:8000/profile/p?q=5",
-        script="/home/raceychan/myprojects/wrk/scripts/post.lua",
-        threads=4,
-        connections=64,
-        duration="10s",
-    )
-}
+
+def generate_lua_scripts(configs: list[BenchmarkConfig]) -> dict[str, str]:
+    """Generate Lua scripts for all test configurations."""
+    tests_dir = Path(__file__).parent / "tests"
+    script_paths = {}
+
+    for config in configs:
+
+        script_path = config.generate_lua_script(tests_dir)
+        script_paths[config.bench_name] = str(script_path)
+        logger.info(f"Generated {script_path} for {config.bench_name} test")
+
+    return script_paths
+
+
+# Load benchmark configurations from test.json
+TESTS_DIR = Path(__file__).parent / "tests"
+TEST_FILE = TESTS_DIR / "test.json"
+
+BENCHMARKS = BenchmarkConfig.from_file(TEST_FILE)
+SCRIPT_PATHS = generate_lua_scripts(BENCHMARKS)
 
 
 class BenchmarkRunner:
@@ -130,6 +176,10 @@ class BenchmarkRunner:
 
     def run_wrk_benchmark(self, benchmark_config: BenchmarkConfig) -> Optional[float]:
         """Run wrk benchmark and extract RPS."""
+        # Get the generated script path for this test
+        test_name = benchmark_config.bench_name
+        script_path = SCRIPT_PATHS[test_name]
+
         cmd = [
             "wrk",
             f"-t{benchmark_config.threads}",
@@ -137,7 +187,7 @@ class BenchmarkRunner:
             f"-d{benchmark_config.duration}",
             benchmark_config.url,
             "-s",
-            benchmark_config.script,
+            script_path,
         ]
 
         try:
@@ -202,11 +252,10 @@ class BenchmarkRunner:
             process.wait()
 
     def benchmark_framework(
-        self, framework_key: str, benchmark_name: str
+        self, framework_key: str, benchmark_config: BenchmarkConfig
     ) -> Optional[float]:
         """Benchmark a single framework."""
         config = FRAMEWORKS[framework_key]
-        benchmark_config = BENCHMARKS[benchmark_name]
 
         logger.info(f"\n{'='*50}")
         logger.info(f"Benchmarking {config.name} ({framework_key})")
@@ -234,6 +283,7 @@ class BenchmarkRunner:
             # Load existing results
             if results_path.exists():
                 with open(results_path, "r") as f:
+
                     all_results = json.load(f)
             else:
                 all_results = {}
@@ -264,7 +314,8 @@ class BenchmarkRunner:
 
     def run_all_benchmarks(self):
         """Run benchmarks for all frameworks."""
-        for benchmark_name in BENCHMARKS.keys():
+        for benchmark_config in BENCHMARKS:
+            benchmark_name = benchmark_config.bench_name
             logger.info(f"\n{'='*60}")
             logger.info(f"Running {benchmark_name.upper()} benchmark suite")
             logger.info(f"{'='*60}")
@@ -272,7 +323,7 @@ class BenchmarkRunner:
             framework_results = []
 
             for framework_key in FRAMEWORKS.keys():
-                rps = self.benchmark_framework(framework_key, benchmark_name)
+                rps = self.benchmark_framework(framework_key, benchmark_config)
                 framework_config = FRAMEWORKS[framework_key]
                 if rps is not None:
                     framework_results.append(
@@ -303,26 +354,3 @@ class BenchmarkRunner:
             logger.info(f"\n{'='*60}")
             logger.info("✓ Benchmarking complete! Check ./assets/ for updated graphs.")
             logger.info(f"{'='*60}")
-
-
-def main():
-    if len(sys.argv) > 1:
-        # Run specific framework
-        framework_key = sys.argv[1]
-        if framework_key not in FRAMEWORKS:
-            logger.error(f"Unknown framework: {framework_key}")
-            logger.info(f"Available: {', '.join(sorted(FRAMEWORKS.keys()))}")
-            sys.exit(1)
-
-        runner = BenchmarkRunner()
-        rps = runner.benchmark_framework(framework_key, "complex")
-        if rps:
-            logger.info(f"Result: {rps:.2f} RPS")
-    else:
-        # Run all benchmarks
-        runner = BenchmarkRunner()
-        runner.run_all_benchmarks()
-
-
-if __name__ == "__main__":
-    main()

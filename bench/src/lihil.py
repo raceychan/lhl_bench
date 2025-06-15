@@ -1,6 +1,6 @@
 from lihil import Lihil, Route, Text
 
-from .data import Engine, User, get_engine
+from .shared import Engine, User, get_engine
 
 profile_route = Route("profile/{pid}")
 profile_route.factory(get_engine)

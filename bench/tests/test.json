@@ -1,0 +1,17 @@
+[
+    {
+        "bench_name": "complex",
+        "method": "POST",
+        "url": "http://localhost:8000/profile/p?q=5",
+        "data": {
+            "id": 1,
+            "name": "user",
+            "email": "user@email.com"
+        }
+    },
+    {
+        "bench_name": "simple",
+        "method": "GET",
+        "url": "http://localhost:8000/health"
+    }
+]

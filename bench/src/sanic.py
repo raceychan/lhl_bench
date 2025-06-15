@@ -1,7 +1,7 @@
 import json
 from sanic import Sanic, Request, response
 
-from .data import Engine, User, get_engine
+from .shared import Engine, User, get_engine
 
 app = Sanic("sanic_bench")
 

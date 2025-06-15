@@ -8,7 +8,7 @@ from blacksheep import (
     get,
 )
 
-from .data import Engine, User, get_engine
+from .shared import Engine, User, get_engine
 
 app = Application()
 

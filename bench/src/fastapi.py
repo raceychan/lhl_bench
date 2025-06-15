@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
-from .data import Engine, get_engine
+from .shared import Engine, get_engine
 
 
 async def dump_wrapper(pid: str, q: int):
