@@ -1,22 +1,21 @@
+import json
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-COMPLEX_RESULT: dict[str, float] = {
-    "Lihil": 35135.64,
-    "Starlette": 30950.06,
-    "Blacksheep": 29732.23,
-    "Litestar": 21905.83,
-    "Robyn": 14683.57,
-    "FastAPI": 5672.98,
-}
 
-PING_PONG_RESULT: dict[str, float] = {
-    "Lihil": 56359.57,
-    "Starlette": 45039.65,
-    "Blacksheep": 51031.89,
-    "Litestar": 34523.74,
-    "Robyn": 20874.14,
-    "FastAPI": 31539.92,
-}
+def load_results() -> dict[str, dict[str, float]]:
+    """Load benchmark results from JSON file."""
+    results_path = Path("benchmark_results.json")
+    if results_path.exists():
+        with open(results_path, 'r') as f:
+            return json.load(f)
+    return {}
+
+
+# Load results from JSON file
+results = load_results()
+COMPLEX_RESULT = results.get("complex", {})
+PING_PONG_RESULT = results.get("ping_pong", {})
 
 # Sort frameworks by RPS descending
 
@@ -55,5 +54,12 @@ def make_graph(result: dict[str, float], save_dir: str, graph_name: str):
 
 
 if __name__ == "__main__":
-    make_graph(COMPLEX_RESULT, "./assets", "bench_complex")
-    make_graph(PING_PONG_RESULT, "./assets", "bench_ping")
+    # Reload results to ensure we have the latest data
+    results = load_results()
+    complex_result = results.get("complex", {})
+    ping_pong_result = results.get("ping_pong", {})
+    
+    if complex_result:
+        make_graph(complex_result, "./assets", "bench_complex")
+    if ping_pong_result:
+        make_graph(ping_pong_result, "./assets", "bench_ping")

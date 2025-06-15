@@ -3,9 +3,10 @@ dependencies = [
   "blacksheep>=2.0.8",
   "fastapi>=0.115.11",
   "httptools>=0.6.4",
-  "lihil>=0.1.12",
+  "lihil>=0.2.20",
   "litestar>=2.15.1",
   "robyn>=0.37.0",
+  "sanic>=25.3.0",
   "uvicorn>=0.34.0",
   "uvloop>=0.21.0",
 ]
@@ -16,6 +17,4 @@ requires-python = ">=3.12"
 version = "0.1.0"
 
 [dependency-groups]
-dev = [
-    "matplotlib>=3.10.1",
-]
+dev = ["matplotlib>=3.10.1"]

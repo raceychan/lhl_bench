@@ -1,0 +1,19 @@
+{
+  "complex": {
+    "Lihil": 21572.32,
+    "Starlette": 12616.48,
+    "FastAPI": 6430.1,
+    "Litestar": 19167.38,
+    "Blacksheep": 18738.95,
+    "Sanic": 10551.56,
+    "Robyn": 8313.51
+  },
+  "ping_pong": {
+    "Lihil": 56359.57,
+    "Starlette": 45039.65,
+    "Blacksheep": 51031.89,
+    "Litestar": 34523.74,
+    "Robyn": 20874.14,
+    "FastAPI": 31539.92
+  }
+}
