@@ -1,16 +1,152 @@
-## TLDR
+# Python ASGI Web Framework Benchmarks
 
-### Test a post request with path, query, body param, and a dependency
+This repository contains an automated micro-benchmarking framework for Python ASGI web frameworks. It automatically runs performance tests, collects results, and generates comparison graphs.
 
-![res](/assets/bench_complex.png)
+## 🏆 Latest Results
 
-[check details here](/bench_results/test_complex.md)
+You might see different results in absolute value of RPS on your computer as hardware might differ, but the ranking should stay the same.
 
-### Test a get request with only static path param and return a static text response
+### Complex POST Request Test
+Tests a POST request with path parameters, query parameters, request body, and dependency injection.
 
-![res](/assets/bench_ping.png)
+![Complex Test Results](/assets/bench_complex.png)
 
-[check details here](/bench_results/test_ping.md)
+[View detailed results](/docs/test_complex.md)
+
+### Simple GET Request Test  
+Tests a simple GET request with static path and static text response.
+
+![Simple Test Results](/assets/bench_ping.png)
+
+[View detailed results](/docs/test_ping.md)
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) package manager
+- [wrk](https://github.com/wg/wrk) HTTP benchmarking tool
+
+### Installation
+```bash
+# Clone the repository
+git clone <repository-url>
+cd lhl_bench
+
+# Install dependencies
+uv sync
+```
+
+### Running Benchmarks
+
+#### Run All Tests on All Frameworks (Recommended)
+```bash
+# Automatically runs all benchmarks and generates graphs
+python -m bench
+```
+
+#### Run Specific Framework
+```bash
+# Test a single framework with all tests
+python -m bench fastapi
+python -m bench lihil
+python -m bench starlette
+python -m bench blacksheep
+python -m bench litestar
+python -m bench robyn
+```
+
+#### Run Specific Test
+```bash
+# Run a single test across all frameworks
+python -m bench --test=complex  # POST request test
+python -m bench --test=simple   # GET request test
+```
+
+#### Run Specific Framework + Test
+```bash
+# Test specific framework with specific test
+python -m bench fastapi --test=complex
+python -m bench lihil --test=simple
+```
+
+#### Additional Options
+```bash
+# List all available frameworks
+python -m bench --list-frameworks
+
+# List all available tests  
+python -m bench --list-tests
+
+# Enable verbose logging
+python -m bench --verbose
+```
+
+## 🏗️ How It Works
+
+This automated benchmarking framework:
+
+1. **Starts each web framework server** using their optimal configuration
+2. **Runs wrk HTTP benchmarks** against standardized endpoints
+3. **Collects performance metrics** (requests per second, latency, etc.)
+4. **Stores results** in JSON format for historical tracking
+5. **Generates comparison graphs** automatically in the `/assets/` directory
+
+### Framework Architecture
+
+```
+bench/
+├── auto_bench.py      # Main benchmarking automation
+├── data_manager.py    # Result storage and configuration
+├── models.py          # Data models for benchmarks
+├── src/               # Framework implementations
+│   ├── fastapi.py
+│   ├── lihil.py
+│   ├── starlette.py
+│   └── ...
+└── tests/             # Test configurations and Lua scripts
+    ├── test.json      # Test definitions
+    ├── complex_post.lua
+    └── simple_get.lua
+```
+
+### Test Definitions
+
+Tests are defined in `/bench/tests/test.json`:
+
+```json
+[
+  {
+    "bench_name": "complex",
+    "method": "POST", 
+    "url": "http://localhost:8000/profile/p?q=5",
+    "data": {
+      "id": 1,
+      "name": "user", 
+      "email": "user@email.com"
+    }
+  },
+  {
+    "bench_name": "simple",
+    "method": "GET",
+    "url": "http://localhost:8000/health"
+  }
+]
+```
+
+### Adding New Frameworks
+
+1. Create a new implementation in `/bench/src/your_framework.py`
+2. Add the framework configuration to `FRAMEWORKS` in `/bench/data_manager.py`
+3. Implement the required endpoints matching the test definitions
+4. Run the benchmarks to see results
+
+### Adding New Tests
+
+1. Add test definition to `/bench/tests/test.json`
+2. Create corresponding Lua script in `/bench/tests/` if needed
+3. Implement the endpoints in all framework implementations
+4. Run benchmarks to generate results
 
 ## PRs are welcome !
 
@@ -19,16 +155,6 @@ It is natural that people would think this benchmark is biased given it is creat
 If you would like to see your test results shown here or if you have better idea for testing/benchmarking, please feel free to submit a PR.
 
 ## Context
-
-### Hardware
-
-- CPU:
- AMD Ryzen 9 7950X 16-Core Processor 4.50 GHz
-
-- RAM 
-64.0 GB (63.1 GB usable)
-
-- internet ethernet controller i225v
 
 ### OS
 Ubuntu 20.04.6 LTS

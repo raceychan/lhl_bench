@@ -12,7 +12,8 @@ Usage:
 import argparse
 import sys
 
-from bench.auto_bench import BENCHMARKS, FRAMEWORKS, BenchmarkRunner, logger
+from bench.auto_bench import BenchmarkRunner, DATA_MANAGER, logger
+from bench.data_manager import FRAMEWORKS
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -32,7 +33,7 @@ Available frameworks: """
         + ", ".join(sorted(FRAMEWORKS.keys()))
         + """
 Available tests: """
-        + ", ".join(BENCHMARKS.keys()),
+        + ", ".join([b.bench_name for b in DATA_MANAGER.benchmarks]),
     )
 
     # Optional positional argument for framework
@@ -47,7 +48,7 @@ Available tests: """
     # Optional keyword argument for test
     parser.add_argument(
         "--test",
-        choices=list(BENCHMARKS.keys()),
+        choices=[b.bench_name for b in DATA_MANAGER.benchmarks],
         help="Specific test to run (optional). If not provided, runs all tests.",
         metavar="TEST",
     )
@@ -85,8 +86,8 @@ def main():
 
     if args.list_tests:
         print("Available tests:")
-        for test_name in BENCHMARKS.keys():
-            print(f"  {test_name}")
+        for benchmark in DATA_MANAGER.benchmarks:
+            print(f"  {benchmark.bench_name}")
         return
 
     # Set up logging level
@@ -96,46 +97,58 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Create benchmark runner
-    runner = BenchmarkRunner()
+    runner = BenchmarkRunner(DATA_MANAGER)
 
     # Determine what to run
     if args.framework and args.test:
         # Run specific framework with specific test
         logger.info(f"Running {args.framework} with {args.test} test")
-        rps = runner.benchmark_framework(args.framework, args.test)
-        if rps:
-            logger.info(f"Result: {rps:.2f} RPS")
+        # Find the benchmark config
+        benchmark_config = next((b for b in DATA_MANAGER.benchmarks if b.bench_name == args.test), None)
+        if benchmark_config:
+            rps = runner.benchmark_framework(args.framework, benchmark_config)
+            if rps:
+                logger.info(f"Result: {rps:.2f} RPS")
+            else:
+                logger.error("Benchmark failed")
+                sys.exit(1)
         else:
-            logger.error("Benchmark failed")
+            logger.error(f"Test '{args.test}' not found")
             sys.exit(1)
 
     elif args.framework:
         # Run specific framework with all tests
         logger.info(f"Running {args.framework} with all tests")
-        for test_name in BENCHMARKS.keys():
+        for benchmark_config in DATA_MANAGER.benchmarks:
             logger.info(f"\n{'='*50}")
-            logger.info(f"Running {test_name} test on {args.framework}")
+            logger.info(f"Running {benchmark_config.bench_name} test on {args.framework}")
             logger.info(f"{'='*50}")
 
-            rps = runner.benchmark_framework(args.framework, test_name)
+            rps = runner.benchmark_framework(args.framework, benchmark_config)
             if rps:
-                logger.info(f" {test_name}: {rps:.2f} RPS")
+                logger.info(f" {benchmark_config.bench_name}: {rps:.2f} RPS")
             else:
-                logger.warning(f" {test_name}: Failed")
+                logger.warning(f" {benchmark_config.bench_name}: Failed")
 
     elif args.test:
         # Run all frameworks with specific test
         logger.info(f"Running all frameworks with {args.test} test")
 
+        # Find the benchmark config
+        benchmark_config = next((b for b in DATA_MANAGER.benchmarks if b.bench_name == args.test), None)
+        if not benchmark_config:
+            logger.error(f"Test '{args.test}' not found")
+            sys.exit(1)
+
         framework_results = []
         for framework_key in FRAMEWORKS.keys():
-            rps = runner.benchmark_framework(framework_key, args.test)
+            rps = runner.benchmark_framework(framework_key, benchmark_config)
             framework_config = FRAMEWORKS[framework_key]
             if rps is not None:
                 framework_results.append((framework_config.name, rps))
-                logger.info(f" {framework_config.name}: {rps:.2f} RPS")
+                logger.info(f"✓ {framework_config.name}: {rps:.2f} RPS")
             else:
-                logger.warning(f" {framework_config.name}: Failed")
+                logger.warning(f"✗ {framework_config.name}: Failed")
 
         # Show sorted results
         if framework_results:
